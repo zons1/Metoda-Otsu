@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Drawing.Imaging;
+using System.Runtime.InteropServices;
 
 namespace OtsuGui;
 
@@ -140,20 +141,37 @@ public partial class Form1 : Form
         if (picOriginal.Image is not Bitmap source) return;
 
         string lib = cbLibrary.SelectedItem?.ToString() ?? "";
+        if (lib != "C++")
+        {
+            MessageBox.Show("Biblioteka ASM zostanie dodana w nastêpnym etapie.", "Info");
+            return;
+        }
+
         int threads = (int)numThreads.Value;
 
-        var sw = Stopwatch.StartNew();
-        // TODO (etap B): tutaj wywo³anie biblioteki C++ / ASM przez P/Invoke.
-        // Na razie tylko kopia obrazu, ¿eby sprawdziæ ca³y przep³yw.
-        var result = (Bitmap)source.Clone();
-        sw.Stop();
+        // Wynik liczony na kopii 24 bpp, orygina³ zostaje bez zmian
+        var result = source.Clone(new Rectangle(0, 0, source.Width, source.Height), PixelFormat.Format24bppRgb);
+        var rect = new Rectangle(0, 0, result.Width, result.Height);
+        var bd = result.LockBits(rect, ImageLockMode.ReadWrite, PixelFormat.Format24bppRgb);
 
-        double ms = sw.Elapsed.TotalMilliseconds;
+        int threshold;
+        double ms;
+        try
+        {
+            var sw = Stopwatch.StartNew();
+            threshold = NativeCpp.OtsuProcess(bd.Scan0, bd.Width, bd.Height, bd.Stride, threads);
+            sw.Stop();
+            ms = sw.Elapsed.TotalMilliseconds;
+        }
+        finally
+        {
+            result.UnlockBits(bd);
+        }
 
         picResult.Image?.Dispose();
         picResult.Image = result;
 
-        lblTime.Text = $"Czas: {ms:F3} ms";
+        lblTime.Text = $"Czas: {ms:F3} ms, próg: {threshold}";
         gridResults.Rows.Add(currentFileName, lib, threads, ms.ToString("F3"));
         btnSave.Enabled = true;
     }
@@ -174,4 +192,11 @@ public partial class Form1 : Form
             MessageBox.Show("Nie uda³o siê zapisaæ obrazu:\n" + ex.Message, "B³¹d");
         }
     }
+
+    internal static class NativeCpp
+    {
+        [DllImport("OtsuCpp.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int OtsuProcess(IntPtr data, int width, int height, int stride, int threads);
+    }
+
 }

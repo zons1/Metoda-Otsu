@@ -10,4 +10,10 @@
     <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
 
+	<Target Name="CopyOtsuCpp" AfterTargets="Build">
+		<Copy SourceFiles="$(MSBuildProjectDirectory)\..\..\bin\x64\$(Configuration)\OtsuCpp.dll"
+			  DestinationFolder="$(OutDir)"
+			  SkipUnchangedFiles="true" />
+	</Target>
+	
 </Project>
