@@ -1,17 +1,29 @@
-namespace OtsuGui
+namespace OtsuGui;
+
+internal static class Program
 {
-    internal static class Program
+    [STAThread]
+    static void Main(string[] args)
     {
-        /// <summary>
-        ///  The main entry point for the application.
-        /// </summary>
-        [STAThread]
-        static void Main()
+        // Liczba w¹tków jako parametr: "OtsuGui.exe 7" albo "OtsuGui.exe --threads 7"
+        int? threads = null;
+        int n;
+        for (int i = 0; i < args.Length; i++)
         {
-            // To customize application configuration such as set high DPI settings or default font,
-            // see https://aka.ms/applicationconfiguration.
-            ApplicationConfiguration.Initialize();
-            Application.Run(new Form1());
+            if ((args[i] == "--threads" || args[i] == "-t") && i + 1 < args.Length
+                && int.TryParse(args[i + 1], out n))
+            {
+                threads = n;
+                break;
+            }
+            if (int.TryParse(args[i], out n))
+            {
+                threads = n;
+                break;
+            }
         }
+
+        ApplicationConfiguration.Initialize();
+        Application.Run(new Form1(threads));
     }
 }
